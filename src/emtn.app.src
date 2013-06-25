@@ -1,0 +1,12 @@
+{application, emtn,
+ [
+  {description, "Erlang NIF bindings for the Mutton core bitmap indexing library"},
+  {vsn, git},
+  {modules, []},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {env, []}
+ ]}.

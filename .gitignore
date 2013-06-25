@@ -2,8 +2,14 @@
 *.beam
 .eunit
 deps/*
-apps/sdgh/ebin
+# neither the .app nor .beam files should be checked in (rebar will manage .app)
+ebin/*.app
+ebin/*.beam
 *~
-dev/*
+# ignore any object files or the library source we're building
+c_src/*.o
+c_src/mutton
 doc/*
-rel/sdgh
+# where rebar will output the driver/port library
+priv
+

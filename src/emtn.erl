@@ -1,4 +1,4 @@
--module(mymodule).
+-module(emtn).
 
 -export([new/0,
          myfunction/1]).
