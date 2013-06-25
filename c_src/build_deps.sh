@@ -11,6 +11,7 @@ case "$1" in
     ;;
 
   *)
+    echo "let's build stuff... "
     test -f mutton/build/lib/libmutton.* && exit 0
 
     (test -d mutton || git clone git@github.com:project-z/mutton.git mutton)
