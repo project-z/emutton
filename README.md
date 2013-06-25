@@ -1,0 +1,1 @@
+# `emutton` - Erlang bindings to [Mutton](https://github.com/project-z/mutton) core bitmap indexing library
