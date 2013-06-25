@@ -6,6 +6,7 @@ test `basename $PWD` != "c_src" && cd c_src
 
 case "$1" in
   clean)
+    echo "tiddying up... "
     rm -rf mutton/build/lib/*
     ;;
 
@@ -23,7 +24,7 @@ case "$1" in
     MAKE=${MAKE:-make}
     (cd mutton && \
         cmake -DCMAKE_BUILD_TYPE=debug -DCMAKE_CXX_FLAGS="-fPIC -m$ERLANG_ARCH" . \
-        && make all mutton_test \
+        && $MAKE all mutton_test \
         && ./test/unit/mutton_test)
     ;;
 esac
