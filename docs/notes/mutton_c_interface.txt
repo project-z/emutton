@@ -1,0 +1,71 @@
+MUTTON_EXPORT void*
+mutton_context();
+
+MUTTON_EXPORT void*
+mutton_set_opt(
+    void*  context,
+    int    option,
+    void*  value,
+    size_t value_size);
+
+MUTTON_EXPORT void*
+mutton_init(
+    void* context);
+
+MUTTON_EXPORT void*
+mutton_index_value(
+    void*                context,
+    mtn_index_partition_t partition,
+    void*                bucket,
+    size_t                bucket_size,
+    void*                field,
+    size_t                field_size,
+    mtn_index_address_t  value,
+    mtn_index_address_t  who_or_what,
+    bool                  state);
+
+MUTTON_EXPORT void*
+mutton_index_value_trigram(
+    void*                context,
+    mtn_index_partition_t partition,
+    void*                bucket,
+    size_t                bucket_size,
+    void*                field,
+    size_t                field_size,
+    void*                value,
+    size_t                value_size,
+    mtn_index_address_t  who_or_what,
+    bool                  state);
+
+MUTTON_EXPORT void*
+mutton_query(
+    void*                context,
+    mtn_index_partition_t partition,
+    void*                bucket,
+    size_t                bucket_size,
+    void*                query,
+    size_t                query_size);
+
+MUTTON_EXPORT void*
+mutton_register_script(
+    void*                context,
+    void*                event_name,
+    size_t                event_name_size,
+    void*                buffer,
+    size_t                buffer_size);
+
+MUTTON_EXPORT void*
+mutton_register_script_path(
+    void*                context,
+    void*                event_name,
+    size_t                event_name_size,
+    void*                path,
+    size_t                path_size);
+
+MUTTON_EXPORT void*
+mutton_process_event(
+    void*                context,
+    void*                event_name,
+    size_t                event_name_size,
+    void*                buffer,
+    size_t                buffer_size);

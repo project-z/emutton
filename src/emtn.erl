@@ -1,34 +1,33 @@
 -module(emtn).
 
--export([new/0,
-         myfunction/1]).
+-export([
+        start/0,
+        stop/1
+        ]).
 
--on_load(init/0).
-
--define(nif_stub, nif_stub_error(?LINE)).
-nif_stub_error(Line) ->
-    erlang:nif_error({nif_not_loaded,module,?MODULE,line,Line}).
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
-init() ->
-    PrivDir = case code:priv_dir(?MODULE) of
-                  {error, bad_name} ->
-                      EbinDir = filename:dirname(code:which(?MODULE)),
-                      AppPath = filename:dirname(EbinDir),
-                      filename:join(AppPath, "priv");
-                  Path ->
-                      Path
-              end,
-    erlang:load_nif(filename:join(PrivDir, ?MODULE), 0).
+load_driver() ->
+    Dir = filename:join([filename:dirname(code:which(emtn)), "..", "priv"]),
+    erl_ddll:load(Dir, "emtn_drv").
 
-new() ->
-    ?nif_stub.
+start() ->
+    case load_driver() of
+            ok ->
+                Port = open_port({spawn, 'emtn_drv'}, [binary]),
+                {ok, {emtn, Port}};
+            {error, Err} ->
+                Msg = erl_ddll:format_error(Err),
+                {error, Msg};
+            _ -> exit({error, could_not_load_driver})
+    end.
 
-myfunction(_Ref) ->
-    ?nif_stub.
+stop({emtn, Port}) ->
+    unlink(Port),
+    port_close(Port).
 
 %% ===================================================================
 %% EUnit tests
@@ -36,7 +35,7 @@ myfunction(_Ref) ->
 -ifdef(TEST).
 
 basic_test() ->
-    {ok, Ref} = new(),
-    ?assertEqual(ok, myfunction(Ref)).
+    {ok, {emtn, P}} = start(),
+    true = stop({emtn, P}). % this calls port_close/1 which returns true
 
 -endif.
