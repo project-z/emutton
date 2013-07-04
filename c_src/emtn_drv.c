@@ -1,9 +1,9 @@
-
-#include <erl_driver.h>
-#include <ei.h>
+#include <stdio.h>
 #include <ctype.h>
 #include <stdbool.h>
 #include <string.h>
+#include <ei.h>
+#include <erl_driver.h>
 
 #include "dbg.h"
 #include "libmutton/mutton.h"
