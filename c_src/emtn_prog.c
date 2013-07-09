@@ -1,73 +1,268 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>  // for stat() & mkdir()
 #include <unistd.h>
-#include <ctype.h>
 #include <stdbool.h>
 #include <string.h>
+#include <dirent.h>
 
 #include "ei.h"
 #include "dbg.h"
 #include "libmutton/mutton.h"
 
+#define MAX_PATH_LEN 4096
+#define MAX_EVENT_SCRIPTS 120
+#define MAX_BUFFER 4096
+
 const static char* DB_PATH = "tmp/demo";
 const static mtn_index_partition_t INDEX_PARTITION = 1;
-const static char* BUCKET_NAME = "i am a bucket";
+const static char* BUCKET_NAME = "planet-hoth";
 
 const static char* BASIC_EVENT_NAME = "basic";
 const static char* BASIC_EVENT_JSON = "{\"a_field\":\"TROLOLOL I'm an Event!!!\"}";
 
 const static char* LUA_SCRIPT_EXT = ".lua";
-const static char* LUA_SCRIPT_PATH = "src/lua_scripts";
+const static char* LUA_SCRIPT_PATH = "/lua_scripts/";
 
-const static char* LUA_PACKAGE_PATH = "src/lua_scripts/packages/?.lua";
-const static char* LUA_LIB_PATH = "src/lua_scripts/lib/?";
+const static char* LUA_PACKAGE_PATH = "/lua_scripts/packages/?.lua";
+const static char* LUA_LIB_PATH = "/lua_scripts/lib/?";
 
-typedef struct {
-    ei_x_buff x;
-    void *mtn_context;
-} state_t;
+struct stat st = { 0 };
 
-typedef char byte;
+typedef unsigned char byte;
 
-read_cmd(byte *bufr)
+// rock the forward declarations... (based on Erlang plain ports example)
+int read_cmd(byte *bufr);
+int read_exact(byte *bufr, int len);
+int write_cmd(byte *bufr, int len);
+int write_exact(byte *bufr, int len);
+
+int read_cmd(byte *bufr)
 {
     int len;
-
-    if(read_exact(bufr, 2) != 2) return -1;
-
+    // the 1st byte will tell use how much data we'll have...
+    if(read_exact(bufr, 2) != 2) {
+        return -1;
+    }
     len = (bufr[0] << 8) | bufr[1];
-
     return read_exact(bufr, len);
-
 }
 
-read_exact(byte *bufr, int len)
+int write_cmd(byte *bufr, int len)
 {
-    int i, got=0;
+    byte li;
+
+    li = (len >> 8) & 0xff;
+    write_exact(&li, 1);
+
+    li = len & 0xff;
+    write_exact(&li, 1);
+
+    return write_exact(bufr, len);
+}
+
+int read_exact(byte *bufr, int len)
+{
+    int i, got = 0;
 
     do {
-        i = read(0, bufr+got, len-got);
-        if(i <= 0) return i;
+        i = read(0, bufr + got, len - got);
+        if(i <= 0) {
+            return i;
+        }
         got += i;
     } while(got < len);
 
     return len;
 }
 
-int main()
+int write_exact(byte *bufr, int len)
 {
-    int fn, arg, result;
-    byte bufr[100];
-
-    while(read_cmd(bufr) > 0) {
-        fn = bufr[0];
-        arg = bufr[1];
-        if(fn == 1) {
-            printf("print something about function: %d", fn);
-        } else if (fn == 2) {
-            printf("print something about function: %d", fn);
+    int i, wrote = 0;
+    do {
+        i = write(1, bufr + wrote, len - wrote);
+        if(i <= 0) {
+            return i;
         }
-        bufr[0] = "return value... TROLOLOLOL";
-        result = 0;
+        wrote += i;
+    } while(wrote < len);
+
+    return len;
+}
+
+char** find_scripts(char *path, const char *extension) {
+    char **scripts;
+    int i = 0;
+    DIR *dir;
+    struct dirent *ent;
+    int malsize = -1;
+    int path_len = strlen(path);
+
+    scripts = malloc(MAX_EVENT_SCRIPTS * sizeof(char *));
+    scripts[MAX_EVENT_SCRIPTS-1] = NULL;
+
+    dir = opendir(path);
+    if(dir != NULL) {
+        while((ent = readdir(dir)) != NULL) {
+            if(strstr(ent->d_name, extension)) {
+                malsize = (path_len + strlen(ent->d_name) + 1) * sizeof(char);
+                scripts[i] = malloc(malsize);
+
+                strlcpy(scripts[i], path, malsize);
+                strlcat(scripts[i], ent->d_name, malsize);
+                printf("found one: %s\n", scripts[i]);
+                i++;
+            }
+        }
+        closedir(dir);
+    } else {
+        // FAIL!
+        return NULL;
     }
 
+    return scripts;
+}
+
+void *initialize_mutton()
+{
+    void *status = NULL;
+    bool ret = false;
+    int rc;
+    char *curr_working_dir = NULL;
+    char package_path[MAX_PATH_LEN];
+    char library_path[MAX_PATH_LEN];
+    char script_path[MAX_PATH_LEN];
+    char **scripts = NULL;
+    char *emessage = NULL;
+    char **curr_script = NULL;
+    void *ctxt = mutton_new_context();
+
+    check(ctxt, "Well, that wasn't what we were expecting.");
+
+    if(stat(DB_PATH, &st) == -1) {
+        rc = mkdir(DB_PATH, 0770);
+        check(rc == 0, "We didn't make the directory after all...");
+    }
+
+    ret = mutton_set_opt(ctxt, MTN_OPT_DB_PATH, (void *)DB_PATH, strlen(DB_PATH), &status);
+    check(ret, "Could not set option for the database path...");
+
+    curr_working_dir = getcwd(NULL, MAX_PATH_LEN);
+    strlcpy(package_path, curr_working_dir, MAX_PATH_LEN);
+    strlcat(package_path, LUA_PACKAGE_PATH, MAX_PATH_LEN);
+
+    ret = mutton_set_opt(ctxt, MTN_OPT_LUA_PATH, (void *)package_path,
+                        strlen(package_path), &status);
+    check(ret, "Could not set option for lua package path...");
+
+    strlcpy(library_path, curr_working_dir, MAX_PATH_LEN);
+    strlcat(library_path, LUA_LIB_PATH, MAX_PATH_LEN);
+
+    ret = mutton_set_opt(ctxt, MTN_OPT_LUA_CPATH, (void *)library_path,
+                        strlen(library_path), &status);
+    check(ret, "Could not set option for lua library path...");
+
+    ret = mutton_init_context(ctxt, &status);
+    check(ret, "Could initialize the context for Mutton...");
+
+    if (ret) {
+        printf("well - you don't have to fall on your sword yet...\n");
+    }
+
+    strlcpy(script_path, curr_working_dir, MAX_PATH_LEN);
+    strlcat(script_path, LUA_SCRIPT_PATH, MAX_PATH_LEN);
+
+    scripts = find_scripts(script_path, LUA_SCRIPT_EXT);
+    check(scripts, "Something went horribly wrong with finding the scripts...");
+
+    for(curr_script = scripts; *curr_script; curr_script++) {
+        char *basename = NULL;
+        char *p = NULL;
+        int basename_len = 0;
+
+        basename = strrchr(*curr_script, '/') + sizeof(char);
+        basename_len = strlen(basename) - strlen(LUA_SCRIPT_EXT);
+        p = malloc((basename_len + 1) * sizeof(char));
+        strncpy(p, basename, basename_len);
+        p[basename_len] = '\0';
+        basename = p;
+
+        ret = mutton_register_script_path(ctxt, MTN_SCRIPT_LUA, (void *)basename,
+                    strlen(basename), (void *)(*curr_script), strlen(*curr_script),
+                    &status);
+        check(ret, "Could not register script paths correctly...");
+        free(basename);
+    }
+
+    free(curr_working_dir);
+    free(scripts);
+
+    return ctxt;
+
+error:
+    mutton_status_get_message(ctxt, status, &emessage);
+    printf("error msg: %s\n", emessage);
+    free(emessage);
+
+    // let's clean up before we exit:
+    if(curr_working_dir) free(curr_working_dir);
+    if(ctxt) mutton_free_context(ctxt);
+    if(status) mutton_free_status(status);
+    if(scripts) free(scripts);
+    return NULL;
+}
+
+
+int main(int argc, char *argv[])
+{
+    void *status = NULL;
+    char *emessage = NULL;
+    bool ret = false;
+    void *ctxt = initialize_mutton();
+    int fn, arg, result;
+    byte bufr[MAX_BUFFER];
+
+    check(ctxt, "Well, that wasn't what we were expecting.");
+
+    for(; read_cmd(bufr) > 0; ) {
+        fn = bufr[0];
+        arg = bufr[1];
+        if (fn == 86) {
+            result = 650;
+            bufr[0] = result;
+            write_cmd(bufr, 1);
+            break;
+        } else if (fn == 1) {
+            result = 80;
+        } else if (fn == 2) {
+            result = 81;
+        }
+        ret = true;
+
+        bufr[0] = result;
+        write_cmd(bufr, 1);
+    }
+
+    printf("bah: %s => { %s, %s }", BUCKET_NAME, BASIC_EVENT_NAME, BASIC_EVENT_JSON);
+/*
+    ret = mutton_process_event_bucketed(ctxt, INDEX_PARTITION,
+                    (void *)BUCKET_NAME, strlen(BUCKET_NAME),
+                    (void *)BASIC_EVENT_NAME, strlen(BASIC_EVENT_NAME),
+                    (void *)BASIC_EVENT_JSON, strlen(BASIC_EVENT_JSON),
+                    &status);
+    check(ret, "Could not process the basic event... ");
+*/
+    mutton_free_context(ctxt);
+
+    return 0;
+
+error: // if we have an error in check(), we'll jump to here...
+    mutton_status_get_message(ctxt, status, &emessage);
+    printf("error msg: %s\n", emessage);
+    free(emessage);
+    // let's clean up before we exit:
+    if(ctxt) mutton_free_context(ctxt);
+    if(status) mutton_free_status(status);
+    return -1;
 }
