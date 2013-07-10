@@ -59,13 +59,11 @@ ping() ->
     call_port({ping}).
 
 loop(Port) ->
-    io:format("loop.... ~n~n"),
     receive
         {call, Caller, Msg} ->
             Port ! {self(), {command, term_to_binary(Msg)}},
             receive
                 {Port, {data, Data}} ->
-                    io:format("Data received: ~p ~n~n", [binary_to_term(Data)]),
                     Caller ! {emtn, binary_to_term(Data)}
             end,
             loop(Port);
@@ -73,16 +71,13 @@ loop(Port) ->
             Port ! {self(), {command, halt_emtn()}},
             receive
                 {'EXIT', P2, Reason} ->
-                    io:format("Port: ~p replied, reason: ~p... ~n", [P2, Reason]),
                     erlang:unlink(P2),
                     erlang:port_close(P2),
-                    exit(normal);
-                Msg ->
-                    io:format("Response: ~p", [Msg]),
+                    exit(Reason);
+                _Msg ->
                     exit(error)
             end;
-        {'EXIT', P3, Reason} ->
-            io:format("Port: ~p stopped; reason: ~p ~n", [P3, Reason]),
+        {'EXIT', _P3, _Reason} ->
             exit(port_terminated)
     end.
 
