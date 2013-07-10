@@ -285,6 +285,9 @@ int main(int argc, char *argv[])
         erl_encode(result, bufr);
         write_cmd(bufr, erl_term_len(result));
 
+        // TODO - evaluate if we need to free all ETERM *ptrs here,
+        // I think we're leaking memory on every iteration...
+
         // if we were told we're done, exit the event-wait loop...
         if(strncmp(ERL_ATOM_PTR(fnp), "done", 4) == 0) {
             break;
@@ -293,19 +296,13 @@ int main(int argc, char *argv[])
 
     result = erl_format("{bah, ~s, ~s, ~s}",
                         BUCKET_NAME, BASIC_EVENT_NAME, BASIC_EVENT_JSON);
-/*
-    ret = mutton_process_event_bucketed(ctxt, INDEX_PARTITION,
-                    (void *)BUCKET_NAME, strlen(BUCKET_NAME),
-                    (void *)BASIC_EVENT_NAME, strlen(BASIC_EVENT_NAME),
-                    (void *)BASIC_EVENT_JSON, strlen(BASIC_EVENT_JSON),
-                    &status);
-    check(ret, "Could not process the basic event... ");
-*/
+
     erl_free_compound(tuplep);
     erl_free_term(fnp);
     erl_free_term(argp);
     erl_free_term(tp);
     erl_free_term(result);
+
     mutton_free_context(ctxt);
 
     return 0;
