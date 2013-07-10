@@ -165,7 +165,7 @@ void *initialize_mutton()
     check(ret, "Could not set option for lua library path...");
 
     ret = mutton_init_context(ctxt, &status);
-    check(ret, "Could initialize the context for Mutton...");
+    check(ret, "Could not initialize the context for Mutton...");
 
     if (ret) {
         printf("well - you don't have to fall on your sword yet...\n");
