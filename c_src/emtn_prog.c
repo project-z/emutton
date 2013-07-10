@@ -209,9 +209,10 @@ error:
 
     // let's clean up before we exit:
     if(curr_working_dir) free(curr_working_dir);
-    if(ctxt) mutton_free_context(ctxt);
-    if(status) mutton_free_status(status);
     if(scripts) free(scripts);
+    mutton_free_context(ctxt);
+    mutton_free_status(status);
+
     return NULL;
 }
 
@@ -221,12 +222,13 @@ int main(int argc, char *argv[])
     void *status = NULL;
     char *emessage = NULL;
     bool ret = false;
-    void *ctxt = initialize_mutton();
     ETERM *tuplep;
     ETERM *fnp, *argp, *tp;
     ETERM *result;
     char *bucket_name, *event_name, *event_json;
     byte bufr[MAX_BUFFER];
+    void *ctxt = initialize_mutton();
+
 
     check(ctxt, "Well, that wasn't what we were expecting.");
 
