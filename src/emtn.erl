@@ -29,7 +29,7 @@ stop() ->
     %emtn ! stop.
     call_port(halt_emtn()).
 
-
+% TODO - find code:priv_dir, then append ?EXT_PROG - this doesn't work from tests.
 init(ExtProg) ->
     register(emtn, self()),
     process_flag(trap_exit, true),
@@ -94,7 +94,7 @@ halt_emtn() -> {done, 86}.
 -ifdef(TEST).
 
 basic_test() ->
-    {ok, {emtn, P}} = start(),
-    Msg = stop(). % this calls port_close/1 which returns true
+    ok = start(),
+    650 = stop(). % this calls port_close/1 which returns true
 
 -endif.
