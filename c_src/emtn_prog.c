@@ -273,7 +273,12 @@ int main(int argc, char *argv[])
                 result = erl_format("{error, ~s, ~s}", emessage, event_json);
             }
         } else if (strncmp(ERL_ATOM_PTR(fnp), "status", 6) == 0) {
-            result = erl_format("{ok, ~i}", 81);
+            argp = erl_element(2, tuplep);
+            result = erl_format("{ok, ~i}", ERL_INT_VALUE(argp));
+        } else if (strncmp(ERL_ATOM_PTR(fnp), "ping", 4) == 0) {
+            result = erl_mk_atom("pong");
+        } else {
+            result = erl_format("{error, unknown message: %s}", ERL_ATOM_PTR(fnp));
         }
         ret = true;
 
