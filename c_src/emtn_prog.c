@@ -29,8 +29,6 @@ const static char* LUA_SCRIPT_PATH = "/lua_scripts/";
 const static char* LUA_PACKAGE_PATH = "/lua_scripts/packages/?.lua";
 const static char* LUA_LIB_PATH = "/lua_scripts/lib/?";
 
-struct stat st = { 0 };
-
 typedef unsigned char byte;
 
 // rock the forward declarations... (based on Erlang plain ports example)
@@ -127,6 +125,7 @@ char** find_scripts(char *path, const char *extension) {
 
 void *initialize_mutton()
 {
+    struct stat st;
     void *status = NULL;
     bool ret = false;
     int rc;
