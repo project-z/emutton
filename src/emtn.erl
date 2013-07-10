@@ -21,7 +21,8 @@
 
 
 start() ->
-    spawn(?MODULE, init, [?EXT_PROG]).
+    spawn(?MODULE, init, [?EXT_PROG]),
+    ok.
 
 
 stop() ->
