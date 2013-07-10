@@ -8,7 +8,8 @@
 
 -export([
         index/3,
-        status/1
+        status/1,
+        ping/0
         ]).
 
 -ifdef(TEST).
@@ -53,6 +54,8 @@ index(BucketName, EventName, EventPayload) ->
 status(Int) ->
     call_port({status, Int}).
 
+ping() ->
+    call_port({ping}).
 
 loop(Port) ->
     io:format("loop.... ~n~n"),
