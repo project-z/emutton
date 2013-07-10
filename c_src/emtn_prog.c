@@ -202,8 +202,9 @@ void *initialize_mutton()
     return ctxt;
 
 error:
+
     mutton_status_get_message(ctxt, status, &emessage);
-    printf("error msg: %s\n", emessage);
+    log_err("mutton status msg: %s\n", emessage);
     free(emessage);
 
     // let's clean up before we exit:
