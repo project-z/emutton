@@ -7,6 +7,7 @@
 #include <string.h>
 #include <dirent.h>
 
+#include "erl_interface.h"
 #include "ei.h"
 #include "dbg.h"
 #include "libmutton/mutton.h"
@@ -220,31 +221,74 @@ int main(int argc, char *argv[])
     char *emessage = NULL;
     bool ret = false;
     void *ctxt = initialize_mutton();
-    int fn, arg, result;
+    ETERM *tuplep;
+    ETERM *fnp, *argp, *tp;
+    ETERM *result;
+    char *bucket_name, *event_name, *event_json;
     byte bufr[MAX_BUFFER];
 
     check(ctxt, "Well, that wasn't what we were expecting.");
 
+    // only call this once - the Erl_Interface must be initalized before other
+    // functions from erl_interface.h can be called.
+    erl_init(NULL, 0);
+
     for(; read_cmd(bufr) > 0; ) {
-        fn = bufr[0];
-        arg = bufr[1];
-        if (fn == 86) {
-            result = 650;
-            bufr[0] = result;
-            write_cmd(bufr, 1);
-            break;
-        } else if (fn == 1) {
-            result = 80;
-        } else if (fn == 2) {
-            result = 81;
+        tuplep = erl_decode(bufr);
+
+        fnp = erl_element(1, tuplep);
+
+
+        if (strncmp(ERL_ATOM_PTR(fnp), "done", 4) == 0) {
+            result = erl_mk_int(650);
+        } else if (strncmp(ERL_ATOM_PTR(fnp), "index", 5) == 0) {
+            argp = erl_element(2, tuplep);
+            // what argp contains is an Erlang tuple in the format:
+            //
+            //      {{bucket, BucketName},
+            //       {event, EventName},
+            //       {payload, EventPayload}}}
+            //
+            // get the bucket tagged tuple
+            tp = erl_element(1, argp);
+            tp = erl_element(2, tp);
+            bucket_name = erl_iolist_to_string(tp);
+            // get the event tagged tuple
+            tp = erl_element(2, argp);
+            tp = erl_element(2, tp);
+            event_name = erl_iolist_to_string(tp);
+            // get the payload tagged tuple
+            tp = erl_element(3, argp);
+            tp = erl_element(2, tp);
+            event_json = erl_iolist_to_string(tp);
+            ret = mutton_process_event_bucketed(ctxt, INDEX_PARTITION,
+                        (void *)bucket_name, strlen(bucket_name),
+                        (void *)event_name, strlen(event_name),
+                        (void *)event_json, strlen(event_json),
+                        &status);
+            if(ret) {
+                result = erl_format("{ok, [~s,~s,~s]}",
+                                    bucket_name, event_name, event_json);
+            } else {
+                mutton_status_get_message(ctxt, status, &emessage);
+                result = erl_format("{error, ~s, ~s}", emessage, event_json);
+            }
+        } else if (strncmp(ERL_ATOM_PTR(fnp), "status", 6) == 0) {
+            result = erl_format("{ok, ~i}", 81);
         }
         ret = true;
 
-        bufr[0] = result;
-        write_cmd(bufr, 1);
+        erl_encode(result, bufr);
+        write_cmd(bufr, erl_term_len(result));
+
+        // if we were told we're done, exit the event-wait loop...
+        if(strncmp(ERL_ATOM_PTR(fnp), "done", 4) == 0) {
+            break;
+        }
     }
 
-    printf("bah: %s => { %s, %s }", BUCKET_NAME, BASIC_EVENT_NAME, BASIC_EVENT_JSON);
+    result = erl_format("{bah, ~s, ~s, ~s}",
+                        BUCKET_NAME, BASIC_EVENT_NAME, BASIC_EVENT_JSON);
 /*
     ret = mutton_process_event_bucketed(ctxt, INDEX_PARTITION,
                     (void *)BUCKET_NAME, strlen(BUCKET_NAME),
@@ -253,6 +297,11 @@ int main(int argc, char *argv[])
                     &status);
     check(ret, "Could not process the basic event... ");
 */
+    erl_free_compound(tuplep);
+    erl_free_term(fnp);
+    erl_free_term(argp);
+    erl_free_term(tp);
+    erl_free_term(result);
     mutton_free_context(ctxt);
 
     return 0;

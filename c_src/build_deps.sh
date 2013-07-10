@@ -2,6 +2,8 @@
 
 set -e
 
+LUA_DIR=../priv/lua_scripts
+
 test `basename $PWD` != "c_src" && cd c_src
 
 case "$1" in
@@ -9,15 +11,15 @@ case "$1" in
     echo "what is the Erlang Arch set to by rebar? " $ERLANG_ARCH
     echo "tiddying up... "
     rm -rf mutton/build/lib/*
-    rm -rf ../lua_scripts/*
+    rm -rf $LUA_DIR
     ;;
 
   lua)
     echo "moving lua script over to the top level directory.... "
-    if [ ! -d "../lua_scripts" ]; then
-	mkdir "../lua_scripts"
+    if [ ! -d "$LUA_DIR" ]; then
+	mkdir "$LUA_DIR"
     fi
-    cp -r mutton/src/demo/lua_scripts/* ../lua_scripts
+    cp -r mutton/src/demo/lua_scripts/* $LUA_DIR
     ;;
 
   *)
