@@ -140,17 +140,18 @@ void *initialize_mutton()
 
     check(ctxt, "Well, that wasn't what we were expecting.");
 
+    curr_working_dir = getcwd(NULL, MAX_PATH_LEN);
+    strlcpy(package_path, curr_working_dir, MAX_PATH_LEN);
+    strlcat(package_path, LUA_PACKAGE_PATH, MAX_PATH_LEN);
+
     if(stat(DB_PATH, &st) == -1) {
         rc = mkdir(DB_PATH, 0770);
-        check(rc == 0, "We didn't make the directory after all...");
+        check(rc == 0, "We didn't make the directory (%s) after all... %d cwd: %s",
+            DB_PATH, rc, curr_working_dir);
     }
 
     ret = mutton_set_opt(ctxt, MTN_OPT_DB_PATH, (void *)DB_PATH, strlen(DB_PATH), &status);
     check(ret, "Could not set option for the database path...");
-
-    curr_working_dir = getcwd(NULL, MAX_PATH_LEN);
-    strlcpy(package_path, curr_working_dir, MAX_PATH_LEN);
-    strlcat(package_path, LUA_PACKAGE_PATH, MAX_PATH_LEN);
 
     ret = mutton_set_opt(ctxt, MTN_OPT_LUA_PATH, (void *)package_path,
                         strlen(package_path), &status);
@@ -236,7 +237,6 @@ int main(int argc, char *argv[])
         tuplep = erl_decode(bufr);
 
         fnp = erl_element(1, tuplep);
-
 
         if (strncmp(ERL_ATOM_PTR(fnp), "done", 4) == 0) {
             result = erl_mk_int(650);
