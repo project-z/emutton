@@ -111,7 +111,6 @@ char** find_scripts(char *path, const char *extension) {
 
                 strlcpy(scripts[i], path, malsize);
                 strlcat(scripts[i], ent->d_name, malsize);
-                printf("found one: %s\n", scripts[i]);
                 i++;
             }
         }
@@ -219,7 +218,7 @@ void *initialize_mutton(const char *curr_working_dir)
     return ctxt;
 
 error:
-
+    log_err("Error handling block...");
     mutton_status_get_message(ctxt, status, &emessage);
     log_err("mutton status msg: %s\n", emessage);
     free(emessage);
@@ -338,8 +337,9 @@ int main(int argc, char *argv[])
     return 0;
 
 error: // if we have an error in check(), we'll jump to here...
+    log_err("Entered the error handler...");
     mutton_status_get_message(ctxt, status, &emessage);
-    printf("error msg: %s\n", emessage);
+    log_err("error msg: %s\n", emessage);
     free(emessage);
     // let's clean up before we exit:
     if(ctxt) mutton_free_context(ctxt);
