@@ -47,6 +47,9 @@ create_port(ExtProgName) ->
             error_logger:format("~w priv directory not found.~n", [?APP_NAME]),
             exit(error);
         PrivDir ->
+            %% if you want to spawn emtn_prog & redirection stderr to a file
+            %% just change the format string to "~s ~s  ~s" and pass in the
+            %% shell redirection to the list being joined: "2>> errors.txt "
             Cmd = lists:flatten(io_lib:format("~s ~s",
                         [filename:join([PrivDir, ExtProgName]), PrivDir])),
             Port = erlang:open_port({spawn, Cmd}, [{packet, 2},
