@@ -1,11 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
-#include <sys/stat.h>  // for stat() & mkdir()
+#include <sys/stat.h>   // for stat() & mkdir()
 #include <unistd.h>
-#include <stdbool.h>
+#include <stdbool.h>    // for the `bool` type used by libmutton
 #include <string.h>
 #include <dirent.h>
+#include <libgen.h>     // for basename()
 
 #include "erl_interface.h"
 #include "ei.h"
@@ -137,7 +138,6 @@ void *initialize_mutton(const char *curr_working_dir)
     char db_path[MAX_PATH_LEN];
     char **scripts = NULL;
     char *emessage = NULL;
-    char **curr_script = NULL;
     void *ctxt = mutton_new_context();
 
     check(ctxt, "Well, that wasn't what we were expecting.");
@@ -179,7 +179,6 @@ void *initialize_mutton(const char *curr_working_dir)
                         strlen(package_path), &status);
     check(ret, "Could not set option for lua package path...");
 
-
     ret = mutton_set_opt(ctxt, MTN_OPT_LUA_CPATH, (void *)library_path,
                         strlen(library_path), &status);
     check(ret, "Could not set option for lua library path...");
@@ -187,30 +186,21 @@ void *initialize_mutton(const char *curr_working_dir)
     ret = mutton_init_context(ctxt, &status);
     check(ret, "Could not initialize the context for Mutton...");
 
-    if (ret) {
-        printf("well - you don't have to fall on your sword yet...\n");
-    }
-
     scripts = find_scripts(script_path, LUA_SCRIPT_EXT);
     check(scripts, "Something went horribly wrong with finding the scripts...");
 
-    for(curr_script = scripts; *curr_script; curr_script++) {
-        char *basename = NULL;
+    for(int i = 0; scripts[i] != NULL; i++) {
+        char *base = NULL;
         char *p = NULL;
-        int basename_len = 0;
 
-        basename = strrchr(*curr_script, '/') + sizeof(char);
-        basename_len = strlen(basename) - strlen(LUA_SCRIPT_EXT);
-        p = malloc((basename_len + 1) * sizeof(char));
-        strncpy(p, basename, basename_len);
-        p[basename_len] = '\0';
-        basename = p;
+        base = basename(scripts[i]);
+        p = strrchr(base, '.');
+        *p ='\0';
 
-        ret = mutton_register_script_path(ctxt, MTN_SCRIPT_LUA, (void *)basename,
-                    strlen(basename), (void *)(*curr_script), strlen(*curr_script),
+        ret = mutton_register_script_path(ctxt, MTN_SCRIPT_LUA, (void *)base,
+                    strlen(base), (void *)(scripts[i]), strlen(scripts[i]),
                     &status);
         check(ret, "Could not register script paths correctly...");
-        free(basename);
     }
 
     free(scripts);
