@@ -37,4 +37,5 @@ clean:
 	rm -f $(exe)
 	rm -rf $(exe).dSYM
 	rm -rf ../priv/$(exe).dSYM
-	bash ./build_deps.sh clean 
+	rm -rf ../priv/mtn
+	bash ./build_deps.sh clean
