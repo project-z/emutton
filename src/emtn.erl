@@ -9,7 +9,8 @@
 -export([
         index/3,
         status/1,
-        ping/0
+        ping/0,
+        cwd/0
         ]).
 
 -ifdef(TEST).
@@ -35,21 +36,7 @@ stop() ->
 init(ExtProgName) ->
     register(emtn, self()),
     process_flag(trap_exit, true),
-    {Port, PrivDir} = create_port(ExtProgName),
-
-    filelib:ensure_dir("tmp/demo/"), % <= make sure to have your trailing slash
-    case filelib:is_file("lua_scripts") of
-        true -> ok;
-        false ->
-            filelib:ensure_dir("./lua_scripts/"), % <= BAM! Trailing SLASH!
-            LuaScriptDir = filename:join([PrivDir, "lua_scripts/"]),
-            LuaScripts = filelib:fold_files(LuaScriptDir, "*.lua", true,
-                                            fun(F,Acc)->
-                                                io:format("~p~n", [F]),
-                                                [F|Acc]
-                                            end, []),
-            io:format("~p~n", LuaScripts)
-    end,
+    {Port, _PrivDir} = create_port(ExtProgName),
 
     loop(Port).
 
@@ -60,8 +47,10 @@ create_port(ExtProgName) ->
             error_logger:format("~w priv directory not found.~n", [?APP_NAME]),
             exit(error);
         PrivDir ->
-            Port = erlang:open_port({spawn, filename:join([PrivDir, ExtProgName])},
-                [{packet, 2}, binary, exit_status]),
+            Cmd = lists:flatten(io_lib:format("~s ~s",
+                        [filename:join([PrivDir, ExtProgName]), PrivDir])),
+            Port = erlang:open_port({spawn, Cmd}, [{packet, 2},
+                                                    binary, exit_status]),
             {Port, PrivDir}
     end.
 
@@ -89,6 +78,10 @@ status(Int) ->
 
 ping() ->
     call_port({ping}).
+
+
+cwd() ->
+    call_port({cwd}).
 
 
 loop(Port) ->
@@ -122,7 +115,7 @@ halt_emtn() -> {done, 86}.
 %% ===================================================================
 -ifdef(TEST).
 
-basic_test() ->
+basic_start_stop_test() ->
     ok = start(),
     %% this sucks, but stop/0 can be called before start/0 is complete and the
     %% test fails... this is a brittle thing, but it seems common in erlang
@@ -130,6 +123,27 @@ basic_test() ->
     %%
     %%      see http://learnyousomeerlang.com/eunit#testing-regis - then scroll
     %%      to the "Don't Drink Too Much Kool-Aid" sidebar
-    timer:sleep(17),
+    timer:sleep(20),
     650 = stop().
+
+ping_test() ->
+    ok = start(),
+    timer:sleep(10),
+    pong = ping(),
+    650 = stop().
+
+status_test() ->
+    ok = start(),
+    timer:sleep(10),
+    {ok, 99} = status(99),
+    650 = stop().
+
+index_one_test() ->
+    ok = start(),
+    timer:sleep(10),
+    BucketName = "planet-hoth",
+    EventName = "basic",
+    Payload = "{\"a_field\":\"sign-up; campaign=20130701\"}",
+    {ok, _} = index(BucketName, EventName, Payload).
+
 -endif.

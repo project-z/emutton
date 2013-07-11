@@ -31,10 +31,10 @@ emtn_prog: deps
 	cc $(CFLAGS) ./*.c -o ../priv/$(exe) $(LDFLAGS)
 
 clean:
-	rm -f priv/*.so
-	rm -f priv/$(exe)
+	rm -f ../priv/*.so
+	rm -f ../priv/$(exe)
 	rm -f *.o
 	rm -f $(exe)
 	rm -rf $(exe).dSYM
-	rm -rf priv/$(exe).dSYM
+	rm -rf ../priv/$(exe).dSYM
 	bash ./build_deps.sh clean 
