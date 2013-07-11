@@ -165,6 +165,10 @@ void *initialize_mutton(const char *curr_working_dir)
         rc = mkdir(db_path, 0770);
         check(rc == 0, "We didn't make the directory (%s) after all... %d cwd: %s",
             db_path, rc, curr_working_dir);
+    } else { // this is ugly... FIX IT
+        // if the path exists, we still have a "partial" path in ``db_path``,
+        // so we've got to concatenate the final path element, "idx_store":
+        strlcat(db_path, DB_PATH_IDX, MAX_PATH_LEN);
     }
 
     ret = mutton_set_opt(ctxt, MTN_OPT_DB_PATH, (void *)db_path, strlen(db_path), &status);
