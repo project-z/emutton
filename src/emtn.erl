@@ -144,6 +144,7 @@ index_one_test() ->
     BucketName = "planet-hoth",
     EventName = "basic",
     Payload = "{\"a_field\":\"sign-up; campaign=20130701\"}",
-    {ok, _} = index(BucketName, EventName, Payload).
+    {ok, _} = index(BucketName, EventName, Payload),
+    650 = stop().
 
 -endif.
