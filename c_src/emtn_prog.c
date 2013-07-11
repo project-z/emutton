@@ -121,6 +121,8 @@ char** find_scripts(char *path, const char *extension) {
         return NULL;
     }
 
+    scripts[i] = NULL;
+
     return scripts;
 }
 
