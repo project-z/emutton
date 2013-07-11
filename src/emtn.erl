@@ -147,4 +147,46 @@ index_one_test() ->
     {ok, _} = index(BucketName, EventName, Payload),
     650 = stop().
 
+index_many_test() ->
+    ok = start(),
+    timer:sleep(10),
+    %% this could be though of as the "product-id", it's a way to group or
+    %% partition data within the overall system.
+    BucketName = "planet-hoth",
+    %% so "basic" will respond to a Lua script named ``basic.lua`` that resides
+    %% in the lua_scripts/ in priv that will be used by libmutton, emtn_prog
+    %% sets up these paths in its' initialize(char *cwd) founction.  It will
+    %% that working directory to the ``code:priv_dir(?APP_NAME)``
+    EventName = "basic",
+    %% within ``basic.lua``, you'll see that it expects events to be in JSON
+    %% format, and that JSON data will has "a_field" key within it.
+    P1 = "{\"a_field\":\"sign-up; campaign=20130701\"}",
+    P2 = "{\"a_field\":\"TROLOLOL I'm an Event!!!\"}",
+    P3 = "{\"a_field\":\"sign-up; campaign=none\"}",
+    P4 = "{\"a_field\":\"cancellation; date=20130710\"}",
+    %% index will reply back with a tuple that is either:
+    %% {ok, Something} for a successful call to index
+    %%  or...
+    %% {error, Msg, Payaload} for a failure,
+    %% More on the failure... the Msg will be the message provided by a call to
+    %% mutton_status_get_message() from libmutton.h (the C wrapper for Mutton).
+    %% Also, the failed Payload will be provided.  This might not be enough
+    %% information to help in triage/troubleshooting.
+    {ok, _} = index(BucketName, EventName, P1),
+    {ok, _} = index(BucketName, EventName, P2),
+    {ok, _} = index(BucketName, EventName, P3),
+    {ok, _} = index(BucketName, EventName, P4),
+
+    650 = stop().
+
+index_failure_test() ->
+    ok = start(),
+    timer:sleep(10),
+    BucketName = "planet-hoth",
+    EventName = "basic",
+    Payload = "{\"snarf_3\":\"sign-up; campaign=20130701\"}",
+    {error, _MuttonMsg, _Payload} = index(BucketName, EventName, Payload),
+
+    650 = stop().
+
 -endif.
