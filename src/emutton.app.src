@@ -1,4 +1,4 @@
-{application, emtn,
+{application, emutton,
  [
   {description, "Erlang NIF bindings for the Mutton core bitmap indexing library"},
   {vsn, "0.1.1b"},
